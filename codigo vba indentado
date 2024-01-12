@@ -1,0 +1,140 @@
+Sub passo2()
+    Dim sintetico As Worksheet
+    Dim demonstrativo As Worksheet
+    Dim codigo1 As String, codigo2 As String, codigo3 As String
+    Dim p_adiantamento_sqg As Double, P_devolucao_sqg As Double, p_pago As Double, p_devedor As Double, saldo_devedor As Double, despesa As Double, PLD As Double, p10_pago As Double, p90_pago As Double, adiantamento_realizado As Double, valor_a_receber_seguradora As Double, result_sum_711_0_711_4 As Double, result_sum_711_1 As Double
+    Dim i As Long, lastRow As Long
+
+    ' Defina os nomes das planilhas
+    Set sintetico = ThisWorkbook.Sheets("sintético")
+    Set demonstrativo = ThisWorkbook.Sheets("demonstrativo")
+
+    ' Defina os códigos a serem filtrados
+    codigo1 = "711-0"
+    codigo2 = "711-4"
+    codigo3 = "711-1"
+    codigo_p_pago1 = "001-0"
+    codigo_p_pago2 = "022-0"
+    codigo_p_pago3 = "024-0"
+    codigo_p_pago4 = "041-0"
+    codigo_p_pago5 = "081-0"
+    codigo_p_pago6 = "112-0"
+    codigo_p_pago7 = "201-2"
+    codigo_despesa1 = "169-0"
+    codigo_despesa2 = "210-0"
+    codigo_despesa3 = "212-0"
+    codigo_despesa4 = "215-0"
+    codigo_despesa5 = "281-0"
+
+    ' Encontre a última linha com dados na planilha "demonstrativo"
+    lastRow = demonstrativo.Cells(demonstrativo.Rows.Count, "C").End(xlUp).Row
+
+    ' Inicialize as somas como zero
+    p_adiantamento_sqg = 0
+    P_devolucao_sqg = 0
+    p_pago = 0
+    p_devedor = 0
+    saldo_devedor = 0
+    despesa = 0
+    PLD = 0
+    p10_pago = 0
+    p90_pago = 0
+    adiantamento_realizado = 0
+    valor_a_receber_seguradora = 0
+    result_sum_711_0_711_4 = 0
+    result_sum_711_1 = 0
+
+    ' Loop através das células e faça as somas condicionais
+    For i = 2 To lastRow ' Supondo que os dados começam na linha 2
+        If demonstrativo.Cells(i, "C").Value = codigo1 Or demonstrativo.Cells(i, "C").Value = codigo2 Then
+            p_adiantamento_sqg = p_adiantamento_sqg + demonstrativo.Cells(i, "E").Value
+        ElseIf demonstrativo.Cells(i, "C").Value = codigo3 Then
+            If demonstrativo.Cells(i, "E").Value < 0 Then
+                P_devolucao_sqg = P_devolucao_sqg - demonstrativo.Cells(i, "E").Value
+            Else
+                P_devolucao_sqg = P_devolucao_sqg + demonstrativo.Cells(i, "E").Value
+            End If
+        ElseIf demonstrativo.Cells(i, "C").Value = codigo_p_pago1 Or demonstrativo.Cells(i, "C").Value = codigo_p_pago2 Or demonstrativo.Cells(i, "C").Value = codigo_p_pago3 Or demonstrativo.Cells(i, "C").Value = codigo_p_pago4 Or demonstrativo.Cells(i, "C").Value = codigo_p_pago5 Or demonstrativo.Cells(i, "C").Value = codigo_p_pago6 Or demonstrativo.Cells(i, "C").Value = codigo_p_pago7 Then
+            p_pago = p_pago + demonstrativo.Cells(i, "E").Value
+        ElseIf demonstrativo.Cells(i, "C").Value = codigo_despesa1 Or demonstrativo.Cells(i, "C").Value = codigo_despesa2 Or demonstrativo.Cells(i, "C").Value = codigo_despesa3 Or demonstrativo.Cells(i, "C").Value = codigo_despesa4 Or demonstrativo.Cells(i, "C").Value = codigo_despesa5 Then
+            If demonstrativo.Cells(i, "D").Value < 0 Then
+                ' Se o valor for negativo, adicione à soma
+                despesa = despesa + demonstrativo.Cells(i, "D").Value
+            End If
+        End If
+
+        ' Segundo loop
+        If Left(demonstrativo.Cells(i, "C").Value, 5) = codigo1 Or Left(demonstrativo.Cells(i, "C").Value, 5) = codigo2 Then
+            result_sum_711_0_711_4 = result_sum_711_0_711_4 + demonstrativo.Cells(i, "D").Value
+        ElseIf Left(demonstrativo.Cells(i, "C").Value, 5) = codigo3 Then
+            result_sum_711_1 = result_sum_711_1 + demonstrativo.Cells(i, "D").Value
+        End If
+    Next i
+
+    ' Subtração adiantamento_sqg = p_adiantamento_sqg - P_devolucao_sqg
+    adiantamento_sqg = p_adiantamento_sqg - P_devolucao_sqg
+
+    ' Calculando % devedor = (100 - (%pago + %devoluçãoSQG))
+    p_devedor = (p_pago + P_devolucao_sqg) - 100
+
+    ' Calculando saldo devedor = valor categoria * % devedor %
+    saldo_devedor = sintetico.Range("B5").Value * (sintetico.Range("B9").Value / 100)
+
+    ' Transformando despesa em positivo
+    despesa = Abs(despesa)
+
+    ' Calculando PLD
+    PLD = saldo_devedor + despesa
+
+    ' Calculando os 10% e os 90%
+    p10_pago = PLD * 0.1
+    p90_pago = PLD * 0.9
+
+    ' Adiantamento realizado
+    adiantamento_realizado = result_sum_711_0_711_4 - result_sum_711_1
+
+    ' Calculando valor a receber da seguradora
+    valor_a_receber_seguradora = p90_pago - adiantamento_realizado
+
+    ' Insira as somas nas células correspondentes na planilha "sintético"
+    sintetico.Range("B1").Value = p_adiantamento_sqg ' % de adiantamento
+    sintetico.Range("B2").Value = P_devolucao_sqg ' Soma para o código "711-1"
+    sintetico.Range("B3").Value = adiantamento_sqg
+    sintetico.Range("B7").Value = p_pago
+    sintetico.Range("B8").Value = P_devolucao_sqg
+    sintetico.Range("B9").Value = p_devedor
+    sintetico.Range("B11").Value = saldo_devedor
+    sintetico.Range("B12").Value = despesa
+    sintetico.Range("B13").Value = PLD
+    sintetico.Range("B15").Value = p10_pago
+    sintetico.Range("B16").Value = p90_pago
+    sintetico.Range("B17").Value = adiantamento_realizado
+    sintetico.Range("B18").Value = valor_a_receber_seguradora
+End Sub
+
+
+Sub passo1()
+    ' Criando as variáveis WB e WS
+    Dim wb As Workbook ' Cria uma variável para representar o arquivo Excel atual.
+    Dim ws As Worksheet ' Cria uma variável para representar cada planilha no arquivo
+
+    ' Defina o arquivo Excel atual
+    Set wb = ThisWorkbook ' Define o arquivo Excel no qual o código está sendo executado.
+
+    ' Excluir abas 2, 3 e 4 e manter somente a aba 1
+    Application.DisplayAlerts = False ' Desativa alertas de exclusão
+    For Each ws In wb.Worksheets ' Percorrendo todas as planilhas do arquivo
+        If ws.Name <> "sintético" Then ' Se o nome da planilha for diferente de "aba1", vai deletar a planilha
+            ws.Delete
+        End If
+    Next ws
+    Application.DisplayAlerts = True ' Reativa alertas
+
+    ' Criar novas abas
+    wb.Sheets.Add(After:=wb.Sheets(wb.Sheets.Count)).Name = "DEMONSTRATIVO"
+    wb.Sheets.Add(After:=wb.Sheets(wb.Sheets.Count)).Name = "DADOS DE CONTATO"
+    wb.Sheets.Add(After:=wb.Sheets(wb.Sheets.Count)).Name = "PROCESSO"
+
+    ' Chamar a função para validar informações entre a aba 1 e "demonstrativo"
+    passo2
+End Sub
